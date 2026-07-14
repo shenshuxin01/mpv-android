@@ -64,6 +64,10 @@ class MainScreenFragment : Fragment(R.layout.fragment_main_screen) {
             returningFromPlayer = true
             Log.v(TAG, "returned from player ($it)")
         }
+        playFile("rtsp://192.168.0.1:8554/live")
+//        Thread.sleep(10000)
+//        MPVLib.command(arrayOf("stop"))
+
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
