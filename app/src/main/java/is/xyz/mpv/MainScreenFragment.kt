@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import java.io.File
 
 class MainScreenFragment : Fragment(R.layout.fragment_main_screen) {
     private lateinit var binding: FragmentMainScreenBinding
@@ -64,10 +65,25 @@ class MainScreenFragment : Fragment(R.layout.fragment_main_screen) {
             returningFromPlayer = true
             Log.v(TAG, "returned from player ($it)")
         }
-        playFile("rtsp://192.168.0.1:8554/live")
-//        Thread.sleep(10000)
-//        MPVLib.command(arrayOf("stop"))
+        Log.v(TAG,"starting play rtsp ssx")
+//        playFile("rtsp://192.168.0.1:8554/live")
+        val path = copyAssetToCache("ssxlog.png")
 
+        playFile(path)
+
+    }
+    private fun copyAssetToCache(assetName: String): String {
+        val outFile = File(requireContext().cacheDir, assetName)
+
+        if (!outFile.exists()) {
+            requireContext().assets.open(assetName).use { input ->
+                outFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+
+        return outFile.absolutePath
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -20,6 +20,8 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.util.Log
 import android.media.AudioManager
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import android.net.Uri
 import android.os.*
 import android.preference.PreferenceManager.getDefaultSharedPreferences
@@ -52,6 +54,7 @@ import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
 import java.io.File
 import java.lang.IllegalArgumentException
+import java.net.ServerSocket
 import kotlin.math.roundToInt
 
 typealias ActivityResultCallback = (Int, Intent?) -> Unit
@@ -301,6 +304,90 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         player.addObserver(this)
         player.initialize(filesDir.path, cacheDir.path)
+        MPVLib.setPropertyString(
+            "keep-open",
+            "yes"
+        )
+        // 开启 IPC socket
+
+        val socketPath = "${filesDir.path}/mpv.sock"
+
+        MPVLib.setPropertyString(
+
+            "input-ipc-server",
+
+            socketPath
+
+        )
+
+        Thread {
+            try {
+                ServerSocket(9000).use { server ->
+
+                    Log.d(TAG, "IPC TCP server started :9000")
+
+                    while (true) {
+
+                        val tcp = server.accept()
+
+                        Thread {
+
+                            try {
+
+                                val mpv = LocalSocket()
+
+                                mpv.connect(
+                                    LocalSocketAddress(
+                                        socketPath,
+                                        LocalSocketAddress.Namespace.FILESYSTEM
+                                    )
+                                )
+
+
+                                val tcpIn = tcp.getInputStream()
+                                val tcpOut = tcp.getOutputStream()
+
+                                val mpvIn = mpv.inputStream
+                                val mpvOut = mpv.outputStream
+
+
+                                // TCP -> mpv
+                                Thread {
+                                    try {
+                                        tcpIn.copyTo(mpvOut)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }.start()
+
+
+                                // mpv -> TCP
+                                Thread {
+                                    try {
+                                        mpvIn.copyTo(tcpOut)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }.start()
+
+
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+
+
+                        }.start()
+                    }
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+        }.start()
+
+        Log.v(TAG, "mpv ipc socket=$socketPath")
+
         player.playFile(filepath)
 
         mediaSession = initMediaSession()
@@ -320,6 +407,12 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             Log.w(TAG, "AudioManager.generateAudioSessionId() returned error")
 
         volumeControlStream = STREAM_TYPE
+//// 10秒后暂停播放
+//        Handler(Looper.getMainLooper()).postDelayed({
+//            player.paused = false
+////            MPVLib.command(arrayOf("set", "pause", "yes"))
+//            MPVLib.command(arrayOf("loadfile", "http://192.168.0.102:8123/media/media/b.jpg?authSig=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIzMmIxYTJhZmI4NWI0MDkxOTk1YWVlZjliMmJmNTZiNyIsInBhdGgiOiIvbWVkaWEvbWVkaWEvYi5qcGciLCJwYXJhbXMiOltdLCJpYXQiOjE3ODQxMDU2NTMsImV4cCI6MTc4NDE5MjA1M30.5flH0dNgq63LRhub7s5eBvcmxY26zK4RjZy4e0S3M-U"))
+//        }, 1000L)
     }
 
     private fun finishWithResult(code: Int, includeTimePos: Boolean = false) {
@@ -1989,8 +2082,20 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
             updateMediaSession()
         }
 
-        if (eventId == MpvEvent.MPV_EVENT_SHUTDOWN)
-            finishWithResult(if (playbackHasStarted) RESULT_OK else RESULT_CANCELED)
+//        if (eventId == MpvEvent.MPV_EVENT_SHUTDOWN)
+//            finishWithResult(if (playbackHasStarted) RESULT_OK else RESULT_CANCELED)
+        if (eventId == MpvEvent.MPV_EVENT_SHUTDOWN) {
+            Log.v(TAG, "mpv shutdown, restarting app")
+
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                startActivity(intent)
+            }
+
+            finish()
+            return
+        }
 
         if (eventId == MpvEvent.MPV_EVENT_START_FILE) {
             val cmds = onloadCommands.toTypedArray()
