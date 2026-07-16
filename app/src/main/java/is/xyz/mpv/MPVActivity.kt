@@ -2085,7 +2085,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 //        if (eventId == MpvEvent.MPV_EVENT_SHUTDOWN)
 //            finishWithResult(if (playbackHasStarted) RESULT_OK else RESULT_CANCELED)
         if (eventId == MpvEvent.MPV_EVENT_SHUTDOWN) {
-            Log.v(TAG, "mpv shutdown, restarting app")
+            Log.e(TAG, "mpv shutdown, restarting app")
 
             val intent = packageManager.getLaunchIntentForPackage(packageName)
             if (intent != null) {
