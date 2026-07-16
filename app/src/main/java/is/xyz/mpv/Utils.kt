@@ -27,6 +27,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
 import java.io.*
+import java.net.Inet4Address
+import java.net.NetworkInterface
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -116,6 +118,23 @@ internal object Utils {
                 return path
             }
         } catch(e: Exception) { } finally { ins?.close() }
+        return null
+    }
+
+    fun getLocalIPv4Address(): String? {
+        try {
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            for (intf in interfaces) {
+                val addrs = intf.inetAddresses
+                for (addr in addrs) {
+                    if (!addr.isLoopbackAddress && addr is Inet4Address) {
+                        return addr.hostAddress
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get local IP address", e)
+        }
         return null
     }
 

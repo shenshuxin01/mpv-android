@@ -323,8 +323,8 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
         Thread {
             try {
                 ServerSocket(9000).use { server ->
-
-                    Log.d(TAG, "IPC TCP server started :9000")
+                    val ip = Utils.getLocalIPv4Address() ?: "127.0.0.1"
+                    Log.d(TAG, "IPC TCP server started $ip:9000")
 
                     while (true) {
 
@@ -355,6 +355,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
                                 Thread {
                                     try {
                                         tcpIn.copyTo(mpvOut)
+                                        Log.i(TAG,"mpv received ${mpvOut.toString()}")
                                     } catch (e: Exception) {
                                         e.printStackTrace()
                                     }
@@ -365,6 +366,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
                                 Thread {
                                     try {
                                         mpvIn.copyTo(tcpOut)
+                                        Log.i(TAG,"mpv sent ${tcpOut.toString()}")
                                     } catch (e: Exception) {
                                         e.printStackTrace()
                                     }
@@ -386,8 +388,7 @@ class MPVActivity : AppCompatActivity(), MPVLib.EventObserver, TouchGesturesObse
 
         }.start()
 
-        Log.v(TAG, "mpv ipc socket=$socketPath")
-
+        Log.i(TAG, "mpv ipc socket=$socketPath")
         player.playFile(filepath)
 
         mediaSession = initMediaSession()
