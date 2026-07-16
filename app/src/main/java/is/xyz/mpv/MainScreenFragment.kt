@@ -70,6 +70,7 @@ class MainScreenFragment : Fragment(R.layout.fragment_main_screen) {
         val path = copyAssetToCache("ssxlog.png")
 //        val path="rtsp://192.168.0.1:8554/live"
 //        val path="http://192.168.0.1:8888/live/index.m3u8"
+//        val path="http://192.168.0.1:8899/movie.mp4"
         Log.e("is.xyz.mpv","init play default image $path")
 
         playFile(path)
